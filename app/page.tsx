@@ -31,13 +31,29 @@ export default function App() {
     });
   }
 
+  async function deleteTodo(id: string) {
+    await client.models.Todo.delete({ id });
+  }
+
   return (
     <main>
       <h1>My todos</h1>
       <button onClick={createTodo}>+ new</button>
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
+          <li key={todo.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{todo.content}</span>
+            <button 
+              onClick={() => deleteTodo(todo.id)} 
+              style={{ 
+                backgroundColor: '#dc2626',
+                padding: '4px 8px',
+                fontSize: '0.875rem'
+              }}
+            >
+              Delete
+            </button>
+          </li>
         ))}
       </ul>
       <div>
