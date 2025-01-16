@@ -1,17 +1,36 @@
 import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 
-/*== STEP 1 ===============================================================
-The section below creates a Todo database table with a "content" field. Try
-adding a new "isDone" field as a boolean. The authorization rule below
-specifies that any user authenticated via an API key can "create", "read",
-"update", and "delete" any "Todo" records.
-=========================================================================*/
 const schema = a.schema({
-  Todo: a
-    .model({
-      content: a.string(),
-    })
-    .authorization((allow) => [allow.publicApiKey()]),
+  Channel: a.model({
+    name: a.string().required(),
+    description: a.string(),
+    createdAt: a.datetime(),
+    updatedAt: a.datetime(),
+  }).authorization((allow) => [allow.authenticated()]),
+
+  Message: a.model({
+    content: a.string().required(),
+    channelId: a.string().required(),
+    senderId: a.string().required(),
+    attachmentPath: a.string(),
+    createdAt: a.datetime(),
+    updatedAt: a.datetime(),
+  }).authorization((allow) => [allow.authenticated()]),
+
+  User: a.model({
+    email: a.string().required(),
+    displayName: a.string().required(),
+    profilePicture: a.string(),
+    createdAt: a.datetime(),
+    updatedAt: a.datetime(),
+  }).authorization((allow) => [allow.authenticated()]),
+
+  ChannelMember: a.model({
+    channelId: a.string().required(),
+    userId: a.string().required(),
+    createdAt: a.datetime(),
+    updatedAt: a.datetime(),
+  }).authorization((allow) => [allow.authenticated()]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -19,10 +38,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "apiKey",
-    apiKeyAuthorizationMode: {
-      expiresInDays: 30,
-    },
+    defaultAuthorizationMode: 'userPool',
   },
 });
 
