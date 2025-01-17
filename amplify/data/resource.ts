@@ -3,14 +3,14 @@ import { addUserToGroup } from "../auth/add-user-to-group/resource";
 import type { ClientSchema } from "@aws-amplify/backend";
 
 const schema = a.schema({
-  Channel: a.model({
+  Channel_renamed: a.model({
     name: a.string().required(),
     description: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  Message: a.model({
+  Message_renamed: a.model({
     content: a.string().required(),
     channelId: a.string().required(),
     senderId: a.string().required(),
@@ -19,7 +19,7 @@ const schema = a.schema({
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  User: a.model({
+  User_renamed: a.model({
     email: a.string().required(),
     displayName: a.string().required(),
     profilePicture: a.string(),
@@ -27,7 +27,7 @@ const schema = a.schema({
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  ChannelMember: a.model({
+  ChannelMember_renamed: a.model({
     channelId: a.string().required(),
     userId: a.string().required(),
     createdAt: a.datetime(),
