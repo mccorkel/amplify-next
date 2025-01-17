@@ -1,5 +1,5 @@
 import { a, defineData } from "@aws-amplify/backend";
-import { addUserToGroup } from "../auth/add-user-to-group/resource";
+import { addUserToGroup } from "../auth/add-user-to-group_renamed/resource";
 import type { ClientSchema } from "@aws-amplify/backend";
 
 const schema = a.schema({
@@ -34,7 +34,7 @@ const schema = a.schema({
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  addUserToGroup: a
+  addUserToGroup_renamed: a
     .mutation()
     .arguments({
       userId: a.string().required(),

@@ -1,5 +1,5 @@
 import { defineAuth } from '@aws-amplify/backend'
-import { addUserToGroup } from "../auth/add-user-to-group/resource"
+import { addUserToGroup } from "./add-user-to-group_renamed/resource"
 
 /**
  * Define and configure your auth resource
