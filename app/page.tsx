@@ -23,8 +23,14 @@ interface MessageWithUser extends Message {
   attachmentUrl?: string;
 }
 
+interface UserInfo {
+  username: string;
+  userId: string;
+  profilePicture?: string;
+}
+
 export default function App() {
-  const [userInfo, setUserInfo] = useState<{ username: string; userId: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [channels, setChannels] = useState<Array<Schema["Channel"]["type"]>>([]);
   const [selectedChannel, setSelectedChannel] = useState<Schema["Channel"]["type"] | null>(null);
   const [messages, setMessages] = useState<MessageWithUser[]>([]);
@@ -174,6 +180,35 @@ export default function App() {
     }
   }
 
+  async function uploadProfilePicture(file: File) {
+    if (!userInfo) return;
+    
+    try {
+      const result = await uploadData({
+        path: `profile-pictures/${file.name}`,
+        data: file,
+        options: {
+          contentType: file.type
+        }
+      }).result;
+
+      // Update user profile with the new picture URL
+      const imageUrl = await getUrl({
+        path: result.path
+      });
+
+      await client.models.User.update({
+        id: userInfo.userId,
+        profilePicture: imageUrl.url.toString()
+      });
+
+      return imageUrl.url.toString();
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      throw error;
+    }
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedChannel || !userInfo || !newMessage.trim()) return;
@@ -185,8 +220,11 @@ export default function App() {
       if (fileInput?.files?.length) {
         const file = fileInput.files[0];
         const result = await uploadData({
-          path: `messages/${selectedChannel.id}/${Date.now()}-${file.name}`,
+          path: `messages/${Date.now()}-${file.name}`,
           data: file,
+          options: {
+            contentType: file.type
+          }
         }).result;
         attachmentPath = result.path;
       }
@@ -195,7 +233,7 @@ export default function App() {
         content: newMessage,
         channelId: selectedChannel.id,
         senderId: userInfo.userId,
-        attachmentPath,
+        attachmentPath
       });
 
       setNewMessage("");
@@ -240,17 +278,35 @@ export default function App() {
       {({ signOut }) => (
         <main className="h-screen flex flex-col">
           <div className="flex justify-between items-center p-4 bg-purple-700 text-white">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <h1 className="text-xl font-bold">Chat App</h1>
-              {/* Connection status indicator */}
-              <div className="text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${
-                  connectionState === ConnectionState.Connected ? 'bg-green-400' :
-                  connectionState === ConnectionState.Connecting ? 'bg-yellow-400' :
-                  'bg-red-400'
-                }`} />
-                <span>{connectionState}</span>
-              </div>
+              {userInfo && (
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          try {
+                            await uploadProfilePicture(file);
+                          } catch (error) {
+                            console.error("Error updating profile picture:", error);
+                          }
+                        }
+                      }}
+                    />
+                    <img 
+                      src={userInfo.profilePicture || `https://api.dicebear.com/7.x/avatars/svg?seed=${userInfo.username}`}
+                      alt="Profile"
+                      className="w-10 h-10 rounded-full border-2 border-white hover:opacity-80"
+                    />
+                  </label>
+                  <span>Welcome, {userInfo.username}!</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-4">
               {userInfo && <span>Welcome, {userInfo.username}!</span>}
