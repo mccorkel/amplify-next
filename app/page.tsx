@@ -27,6 +27,7 @@ interface UserInfo {
   username: string;
   userId: string;
   profilePicture?: string;
+  groups: string[];
 }
 
 export default function App() {
@@ -66,7 +67,9 @@ export default function App() {
     try {
       const { username, userId } = await getCurrentUser();
       const session = await fetchAuthSession();
-      setUserInfo({ username, userId });
+      const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
+      
+      setUserInfo({ username, userId, groups });
 
       // Create or update user profile
       const { data: existingUsers } = await client.models.User.list({
@@ -181,7 +184,10 @@ export default function App() {
   }
 
   async function uploadProfilePicture(file: File) {
-    if (!userInfo) return;
+    if (!userInfo || !userInfo.groups.includes('user')) {
+      console.error("User not authorized to upload files");
+      return;
+    }
     
     try {
       const result = await uploadData({
@@ -212,6 +218,10 @@ export default function App() {
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedChannel || !userInfo || !newMessage.trim()) return;
+    if (!userInfo.groups.includes('user')) {
+      console.error("User not authorized to upload files");
+      return;
+    }
 
     try {
       const fileInput = document.querySelector<HTMLInputElement>('#file-upload');
