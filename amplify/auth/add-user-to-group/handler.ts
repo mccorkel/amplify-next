@@ -1,4 +1,4 @@
-import type { Schema } from "../resource";
+import type { Schema } from "../../data/resource";
 import { env } from "$amplify/env/add-user-to-group";
 import {
   AdminAddUserToGroupCommand,
