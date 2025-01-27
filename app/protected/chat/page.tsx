@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {getCurrentUser} from 'aws-amplify/auth';
+import { TEAM_ABBREVS } from "@/app/lib/teamLogos";
+import TeamLogo from "react-mlb-logos";
 
 /**
  * Placeholder function to simulate calling a vector DB for baseball info
@@ -37,6 +39,8 @@ interface Message {
   createdAt?: string;
 }
 
+const TEAM_ABBREVIATIONS = TEAM_ABBREVS;
+
 export default function ChatPage() {
   const client = generateClient<Schema>();
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -65,19 +69,27 @@ export default function ChatPage() {
   useEffect(() => {
     async function fetchChannels() {
       try {
+        // Ensure user is authenticated before making requests
+        const user = await getCurrentUser();
+        if (!user) return;
+        
         const result = await client.models.Channel.list();
         if (result.data) {
           setChannels(result.data as Channel[]);
           if (result.data.length > 0) {
-            setSelectedChannel(result.data[0] as Channel);
+            setSelectedChannel(result.data[0]);
           }
         }
-      } catch (error) {
-        console.error("Error fetching channels:", error);
+      } catch (err: any) {
+        if (err.message === "No current user") {
+          console.log("Waiting for user to be authenticated...");
+          return;
+        }
+        console.error("Error fetching channels:", err);
       }
     }
     fetchChannels();
-  }, [client.models.Channel]);
+  }, [client]);
 
   // 2) Fetch messages for the selected channel
   useEffect(() => {
@@ -97,12 +109,6 @@ export default function ChatPage() {
     }
     fetchChannelMessages();
   }, [selectedChannel, client.models.Message]);
-
-  // Switch channels
-  function handleSelectChannel(channel: Channel) {
-    setSelectedChannel(channel);
-    setMessages([]);
-  }
 
   // Check if the user addresses the Old Timer
   function isAddressingOldTimer(input: string) {
@@ -183,61 +189,66 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="chat-app flex-1 flex">
-      {/* Left Sidebar */}
-      <aside className="left-nav">
-        <div className="nav-header px-4">Channels</div>
-        <div className="flex-1 overflow-y-auto px-2">
-          {channels.map((ch) => (
-            <div
-              key={ch.id}
-              onClick={() => handleSelectChannel(ch)}
-              className={`channel-name px-2 py-1 cursor-pointer ${
-                selectedChannel && ch.id === selectedChannel.id ? "selected" : ""
+    <div className="flex-1 flex">
+      {/* Left sidebar - Channels */}
+      <aside className="w-64 bg-gray-800 text-white p-4">
+        <h2 className="text-xl font-bold mb-4">Channels</h2>
+        <div className="flex-1 overflow-y-auto">
+          {channels.map((channel) => (
+            <button
+              key={channel.id}
+              onClick={() => setSelectedChannel(channel)}
+              className={`w-full text-left p-2 rounded ${
+                selectedChannel?.id === channel.id
+                  ? "bg-gray-700"
+                  : "hover:bg-gray-700"
               }`}
             >
-              {ch.name}
-            </div>
+              {channel.name}
+            </button>
           ))}
         </div>
       </aside>
 
-      {/* Chat Area */}
-      <section className="chat-area">
-        <header className="nav-header px-4">
-          {selectedChannel ? <h2>{selectedChannel.name}</h2> : <h2>Select a channel</h2>}
-        </header>
-
-        <div className="messages-container">
-          {messages.map((msg) => (
-            <div key={msg.id || Math.random()} className="mb-2">
-              <span className="user-name mr-2">
-                {msg.senderId === "OldTimer" ? "Old Timer" : msg.senderId}:
-              </span>
-              <span className="message-content">{msg.content}</span>
-            </div>
-          ))}
+      {/* Main chat area */}
+      <main className="flex-1 flex flex-col">
+        <div className="flex-1 p-4">
+          <div className="mb-4">
+            <h2 className="text-xl font-bold">
+              {selectedChannel ? selectedChannel.name : "Select a channel"}
+            </h2>
+          </div>
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div key={message.id} className="p-2 rounded bg-gray-100">
+                <div className="font-bold">{message.senderId === "OldTimer" ? "Old Timer" : message.senderId}:</div>
+                <div>{message.content}</div>
+              </div>
+            ))}
+          </div>
         </div>
-
         {selectedChannel && (
-          <div className="message-input-container">
-            <input
-              className="message-input flex-1 px-4 py-2"
-              placeholder="Type your message here..."
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-            />
-            <button
-              onClick={sendMessage}
-              className="ml-3 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              Send
-            </button>
+          <div className="p-4 border-t">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Type your message here..."
+                className="flex-1 p-2 border rounded"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+              />
+              <button
+                onClick={sendMessage}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Send
+              </button>
+            </div>
           </div>
         )}
-      </section>
+      </main>
 
-      {/* Right Sidebar */}
+      {/* Right sidebar */}
       <aside className="right-nav">
         <div className="nav-header px-4">Info</div>
         <div className="flex-1 overflow-y-auto px-2 text-sm">
@@ -252,6 +263,6 @@ export default function ChatPage() {
           )}
         </div>
       </aside>
-    </main>
+    </div>
   );
 }

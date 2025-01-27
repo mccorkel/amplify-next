@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <>
@@ -23,9 +25,11 @@ export default function HomePage() {
             Chat with AI old-timers who know every stat, every game, and every
             moment in your team&apos;s history.
           </p>
-          <button className="rounded bg-white px-8 py-3 text-base font-medium text-gray-800 transition hover:bg-gray-50">
-            STEP UP TO THE PLATE
-          </button>
+          <Link href="/protected/chat">
+            <button className="rounded bg-white px-8 py-3 text-base font-medium text-gray-800 transition hover:bg-gray-50">
+              STEP UP TO THE PLATE
+            </button>
+          </Link>
         </div>
       </section>
 
@@ -115,9 +119,11 @@ export default function HomePage() {
             Whether it&apos;s the 1927 Yankees or last night&apos;s game, our AI veterans have
             every detail ready to share.
           </p>
-          <button className="rounded bg-red-500 px-8 py-3 text-base font-medium text-white transition hover:bg-red-600">
-            Join the Conversation
-          </button>
+          <Link href="/protected/chat">
+            <button className="rounded bg-red-500 px-8 py-3 text-base font-medium text-white transition hover:bg-red-600">
+              Join the Conversation
+            </button>
+          </Link>
         </div>
       </section>
 

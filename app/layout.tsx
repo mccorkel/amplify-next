@@ -27,11 +27,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </span>
             </Link>
             <nav className="flex items-center space-x-4">
-              <Link href="/login">
-                <button className="rounded border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700">
-                  SIGN IN
-                </button>
-              </Link>
               <Link href="/protected/chat">
                 <button className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">
                   GET STARTED
