@@ -228,23 +228,43 @@ export default function ChatPage() {
 
   async function callOldTimerAPI(message: string): Promise<string> {
     try {
+      console.log('[Client] Calling Old Timer API with message:', message.substring(0, 100));
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ message })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get response from Old Timer');
-      }
-
+      console.log('[Client] API Response status:', response.status);
+      
       const data = await response.json();
+      console.log('[Client] API Response data:', data);
+      
+      if (!response.ok) {
+        console.error('[Client] API Error:', data);
+        throw new Error(data.error || 'Failed to get response from Old Timer');
+      }
+      
+      if (!data.response) {
+        console.error('[Client] Invalid API response format:', data);
+        throw new Error('Invalid response format from API');
+      }
+      
+      console.log('[Client] Successfully received response from Old Timer API');
       return data.response;
     } catch (error) {
-      console.error('Error calling Old Timer API:', error);
-      return "Sorry, I'm having trouble with my baseball memories right now.";
+      console.error('[Client] Error in callOldTimerAPI:', error);
+      if (error instanceof Error) {
+        console.error('[Client] Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      }
+      throw error;
     }
   }
 

@@ -1,6 +1,5 @@
-import { Pinecone } from "@pinecone-database/pinecone";
-import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { embedText, queryPinecone, generateOldTimerResponse } from './utils';
 
 // Check for required environment variables
 if (!process.env.PINECONE_API_KEY) {
@@ -15,94 +14,77 @@ if (!process.env.OPENAI_API_KEY) {
   throw new Error("Missing OPENAI_API_KEY environment variable");
 }
 
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY
-});
-
-const index = pinecone.index(process.env.PINECONE_INDEX);
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-async function embedText(input: string): Promise<number[] | null> {
-  try {
-    const response = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
-      input: input
-    });
-    return response.data[0].embedding;
-  } catch (error) {
-    console.error("Error creating embedding:", error);
-    return null;
-  }
-}
-
-async function queryPinecone(vector: number[], topK = 3): Promise<string> {
-  try {
-    const queryResponse = await index.query({
-      vector,
-      topK,
-      includeMetadata: true
-    });
-    
-    if (!queryResponse.matches?.length) return "";
-    
-    return queryResponse.matches
-      .map(match => (match.metadata?.text as string) ?? "")
-      .join("\n");
-  } catch (error) {
-    console.error("Error querying Pinecone:", error);
-    return "";
-  }
-}
-
-async function generateOldTimerResponse(userMessage: string, context: string): Promise<string> {
-  try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: "You are a friendly baseball historian who speaks in a folksy manner." },
-        { role: "user", content: `You are an "Old Timer" baseball historian.
-Context from baseball knowledge base:
-${context}
----
-Answer the user in a friendly, folksy tone. If the context doesn't contain relevant information, 
-you can draw from your general baseball knowledge, but prioritize the context if available.
-User message: "${userMessage}"` }
-      ],
-      temperature: 0.7,
-      max_tokens: 300
-    });
-
-    return completion.choices[0].message.content ?? "Sorry, I'm having trouble right now.";
-  } catch (error) {
-    console.error("Error generating response:", error);
-    return "Sorry, I'm having trouble accessing my baseball memories right now.";
-  }
-}
-
 export async function POST(request: Request) {
+  console.log('[Server] Received chat request');
   try {
-    const { message } = await request.json();
+    // Log environment check
+    console.log('[Server] Environment variables check:', {
+      hasPineconeKey: !!process.env.PINECONE_API_KEY,
+      hasPineconeIndex: !!process.env.PINECONE_INDEX,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY
+    });
+
+    // Validate request body
+    const body = await request.json();
+    if (!body || typeof body.message !== 'string' || !body.message.trim()) {
+      console.error('[Server] Invalid request body:', body);
+      return NextResponse.json(
+        { error: "Invalid request: message is required" },
+        { status: 400 }
+      );
+    }
+
+    const message = body.message.trim();
+    console.log('[Server] Processing message:', message.substring(0, 100));
     
     // Create embedding for the query
+    console.log('[Server] Creating embedding...');
     const embedding = await embedText(message);
     if (!embedding) {
-      return NextResponse.json({ error: "Failed to create embedding" }, { status: 500 });
+      console.error('[Server] Failed to create embedding');
+      return NextResponse.json(
+        { error: "Failed to create embedding for the message" },
+        { status: 500 }
+      );
     }
+    console.log('[Server] Successfully created embedding');
     
     // Query Pinecone with the embedding
+    console.log('[Server] Querying Pinecone...');
     const context = await queryPinecone(embedding);
+    if (context === null) {
+      console.error('[Server] Failed to query Pinecone');
+      return NextResponse.json(
+        { error: "Failed to retrieve relevant baseball knowledge" },
+        { status: 500 }
+      );
+    }
+    console.log('[Server] Successfully retrieved context from Pinecone, length:', context.length);
     
     // Generate response using the context
+    console.log('[Server] Generating response...');
     const response = await generateOldTimerResponse(message, context);
+    if (!response) {
+      console.error('[Server] Failed to generate response');
+      return NextResponse.json(
+        { error: "Failed to generate Old Timer's response" },
+        { status: 500 }
+      );
+    }
     
+    console.log('[Server] Successfully generated response');
     return NextResponse.json({ response });
   } catch (error) {
-    console.error("Error in chat route:", error);
+    console.error("[Server] Error in chat route:", error);
+    if (error instanceof Error) {
+      console.error("[Server] Error details:", {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+    }
     return NextResponse.json(
-      { error: "Failed to process request" },
+      { error: "Failed to process request: " + (error instanceof Error ? error.message : "Unknown error") },
       { status: 500 }
     );
   }
