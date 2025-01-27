@@ -3,10 +3,18 @@
 import { ReactNode } from "react";
 import { Authenticator } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
+import { Amplify } from 'aws-amplify';
+import { generateClient } from 'aws-amplify/api';
+import config from '../../amplify_outputs.json';
+
+Amplify.configure(config);
+console.log("Amplify.getConfig():",Amplify.getConfig());
+
 
 /**
- * The ProtectedLayout now uses <Authenticator> to guard /protected routes.
- * If not signed in, the user sees Amplify’s sign-in UI automatically.
+ * The ProtectedLayout uses <Authenticator> to guard /protected routes.
+ * If not signed in, the user sees Amplify's sign-in UI automatically.
+ * No manual configuration needed for Gen 2 - the client is auto-generated.
  */
 export default function ProtectedLayout({ children }: { children: ReactNode }) {
   return (
