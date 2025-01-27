@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 import { embedText, queryPinecone, generateOldTimerResponse } from './utils';
 
-// Check for required environment variables
-if (!process.env.PINECONE_API_KEY) {
-  throw new Error("Missing PINECONE_API_KEY environment variable");
-}
-
-if (!process.env.PINECONE_INDEX) {
-  throw new Error("Missing PINECONE_INDEX environment variable");
-}
-
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error("Missing OPENAI_API_KEY environment variable");
-}
-
 export async function POST(request: Request) {
-  console.log('[Server] Received chat request');
   try {
+    // Check for required environment variables
+    if (!process.env.PINECONE_API_KEY) {
+      return NextResponse.json({ error: "Missing PINECONE_API_KEY environment variable" }, { status: 500 });
+    }
+
+    if (!process.env.PINECONE_INDEX) {
+      return NextResponse.json({ error: "Missing PINECONE_INDEX environment variable" }, { status: 500 });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: "Missing OPENAI_API_KEY environment variable" }, { status: 500 });
+    }
+
+    console.log('[Server] Received chat request');
+    
     // Log environment check
     console.log('[Server] Environment variables check:', {
       hasPineconeKey: !!process.env.PINECONE_API_KEY,
@@ -75,17 +76,15 @@ export async function POST(request: Request) {
     console.log('[Server] Successfully generated response');
     return NextResponse.json({ response });
   } catch (error) {
-    console.error("[Server] Error in chat route:", error);
-    if (error instanceof Error) {
-      console.error("[Server] Error details:", {
+    console.error("[Server] Unhandled error in chat route:", error);
+    // Return the full error details in a structured format
+    return NextResponse.json({
+      error: "Internal server error",
+      details: error instanceof Error ? {
         name: error.name,
         message: error.message,
-        stack: error.stack
-      });
-    }
-    return NextResponse.json(
-      { error: "Failed to process request: " + (error instanceof Error ? error.message : "Unknown error") },
-      { status: 500 }
-    );
+        stack: error.stack,
+      } : String(error)
+    }, { status: 500 });
   }
 } 

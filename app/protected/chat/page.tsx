@@ -240,7 +240,19 @@ export default function ChatPage() {
 
       console.log('[Client] API Response status:', response.status);
       
-      const data = await response.json();
+      // Clone the response to read it twice
+      const responseClone = response.clone();
+      const rawText = await responseClone.text();
+      console.log('[Client] Raw response:', rawText);
+      
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('[Client] Failed to parse JSON response. Raw response:', rawText);
+        throw e;
+      }
+      
       console.log('[Client] API Response data:', data);
       
       if (!response.ok) {
