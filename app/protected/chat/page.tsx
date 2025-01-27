@@ -39,6 +39,14 @@ interface Message {
   createdAt?: string;
 }
 
+interface ChannelMember {
+  id?: string;
+  channelId: string;
+  userId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 const TEAM_ABBREVIATIONS = TEAM_ABBREVS;
 
 export default function ChatPage() {
@@ -48,6 +56,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [userId, setUserId] = useState<string>("");
+  const [myChannelIds, setMyChannelIds] = useState<Set<string>>(new Set());
 
   // On mount, fetch user info from Amplify Auth
   useEffect(() => {
@@ -57,12 +66,30 @@ export default function ChatPage() {
         // By default, user.username or user.attributes.email might be used
         if (user) {
           setUserId(user.username);
+          await loadMemberships(user.username);
         }
       } catch (err) {
         console.error("Failed to retrieve user from Auth:", err);
       }
     }
     fetchAuthUser();
+    
+    async function loadMemberships(uid: string) {
+      try {
+        const res = await client.models.ChannelMember.list({
+          filter: { userId: { eq: uid } }
+        });
+        if (res.data) {
+          const setOfIds = new Set<string>();
+          res.data.forEach((cm: any) => {
+            setOfIds.add(cm.channelId);
+          });
+          setMyChannelIds(setOfIds);
+        }
+      } catch (error) {
+        console.error("Error loading memberships:", error);
+      }
+    }
   }, []);
 
   // 1) Fetch channels from Amplify Data
@@ -111,6 +138,39 @@ export default function ChatPage() {
   }, [selectedChannel, client.models.Message]);
 
   // Check if the user addresses the Old Timer
+  async function toggleMembership(ch: Channel) {
+    if (!userId) return;
+    try {
+      if (myChannelIds.has(ch.id)) {
+        // Remove membership
+        // We'll find the record, then delete
+        const listRes = await client.models.ChannelMember.list({
+          filter: { channelId: { eq: ch.id }, userId: { eq: userId } }
+        });
+        if (listRes.data && listRes.data.length > 0) {
+          const cm = listRes.data[0];
+          await client.models.ChannelMember.delete({ id: cm.id });
+          setMyChannelIds(prev => {
+            const copy = new Set(prev);
+            copy.delete(ch.id);
+            return copy;
+          });
+        }
+      } else {
+        // Create membership
+        const newMem = await client.models.ChannelMember.create({
+          channelId: ch.id,
+          userId
+        });
+        if (newMem && newMem.data) {
+          setMyChannelIds(prev => new Set(prev).add(ch.id));
+        }
+      }
+    } catch (err) {
+      console.error("Error toggling membership:", err);
+    }
+  }
+  
   function isAddressingOldTimer(input: string) {
     const lowered = input.toLowerCase();
     return lowered.includes("old timer") || lowered.includes("@oldtimer");
@@ -123,6 +183,11 @@ export default function ChatPage() {
     setInputValue("");
 
     // Create user message
+    if (!myChannelIds.has(selectedChannel.id)) {
+      alert("You must join this channel before posting!");
+      return;
+    }
+    
     const newMessage: Message = {
       content,
       channelId: selectedChannel.id,
@@ -195,17 +260,20 @@ export default function ChatPage() {
         <h2 className="text-xl font-bold mb-4">Channels</h2>
         <div className="flex-1 overflow-y-auto">
           {channels.map((channel) => (
-            <button
-              key={channel.id}
-              onClick={() => setSelectedChannel(channel)}
-              className={`w-full text-left p-2 rounded ${
-                selectedChannel?.id === channel.id
-                  ? "bg-gray-700"
-                  : "hover:bg-gray-700"
-              }`}
-            >
-              {channel.name}
-            </button>
+            <div key={channel.id} className={`flex items-center justify-between p-2 rounded mb-1 hover:bg-gray-700 ${selectedChannel?.id === channel.id ? 'bg-gray-700' : ''}`}>
+              <button
+                onClick={() => setSelectedChannel(channel)}
+                className="text-left flex-1"
+              >
+                {channel.name}
+              </button>
+              <button
+                onClick={() => toggleMembership(channel)}
+                className="text-xs bg-patriotic-blue text-white px-2 py-1 rounded ml-2 hover:bg-patriotic-red"
+              >
+                {myChannelIds.has(channel.id) ? "Leave" : "Join"}
+              </button>
+            </div>
           ))}
         </div>
       </aside>

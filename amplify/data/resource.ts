@@ -27,7 +27,7 @@ const schema = a.schema({
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  ChannelMember: a.model({
+ChannelMember: a.model({
     channelId: a.string().required(),
     userId: a.string().required(),
     createdAt: a.datetime(),
