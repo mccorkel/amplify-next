@@ -2,11 +2,16 @@ import React from 'react';
 import Image from 'next/image';
 
 interface TeamLogoProps {
-  abbrev: string;
-  size?: number;
+  abbrev?: string;
+  size: number;
 }
 
-export function TeamLogo({ abbrev, size = 24 }: TeamLogoProps) {
+export function TeamLogo({ abbrev, size }: TeamLogoProps) {
+  if (!abbrev) {
+    // Return a placeholder or empty div if no abbreviation is provided
+    return <div style={{ width: size, height: size }} />;
+  }
+
   return (
     <div style={{ width: size, height: size }}>
       <Image

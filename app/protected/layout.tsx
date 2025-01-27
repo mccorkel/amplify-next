@@ -43,15 +43,27 @@ function AuthenticatedLayout({
   const client = generateClient<Schema>();
 
   useEffect(() => {
-    async function fetchUser() {
-      if (user?.userId) {
+    async function fetchUser(retryCount = 0) {
+      if (!user?.userId) return;
+      
+      try {
         const result = await client.models.User.get({ id: user.userId });
         if (result?.data?.displayName) {
           setDisplayName(result.data.displayName);
         }
+      } catch (err) {
+        console.error("Error fetching user:", err);
+        // Retry up to 3 times with increasing delay
+        if (retryCount < 3) {
+          const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.log(`Retrying in ${delay}ms...`);
+          setTimeout(() => fetchUser(retryCount + 1), delay);
+        }
       }
     }
-    fetchUser();
+    
+    // Initial delay to allow auth token setup
+    setTimeout(() => fetchUser(), 500);
   }, [user, client]);
 
   return (
@@ -68,7 +80,9 @@ function AuthenticatedLayout({
             </span>
           </Link>
           <nav className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">Hi, {displayName || "Guest"}!</span>
+            <Link href="/protected/profile" className="text-sm text-gray-600 hover:text-gray-900">
+              Hi, {displayName || "Guest"}!
+            </Link>
             <button
               onClick={signOut}
               className="rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"

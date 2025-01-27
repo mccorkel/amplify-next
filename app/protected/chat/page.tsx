@@ -55,6 +55,12 @@ interface ChannelMember {
   updatedAt?: string;
 }
 
+interface MessageWithUser extends Omit<Message, 'createdAt' | 'updatedAt'> {
+  senderDisplayName?: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 const TEAM_ABBREVIATIONS = TEAM_ABBREVS;
 
 // Move client initialization outside of component
@@ -66,7 +72,7 @@ export default function ChatPage() {
   // Remove client initialization from here
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageWithUser[]>([]);
   const [channelUsers, setChannelUsers] = useState<ChannelUser[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [userId, setUserId] = useState<string>("");
@@ -77,8 +83,25 @@ export default function ChatPage() {
     async function fetchAuthUser() {
       try {
         const user = await getCurrentUser();
-        if (user) {
-          setUserId(user.username);
+        if (!user || !user.username) return;
+        
+        setUserId(user.username);
+        
+        // Check if user exists in database
+        const existingUser = await client.models.User.get({ id: user.username });
+        if (!existingUser?.data) {
+          const email = user.signInDetails?.loginId;
+          if (!email) return;
+          
+          // Create short hash from username (last 5 characters)
+          const shortHash = user.username.slice(-5);
+          
+          // Create new user record if doesn't exist
+          await client.models.User.create({
+            id: user.username,
+            email: email,
+            displayName: `Guest ${shortHash}` // Default display name format
+          });
         }
       } catch (err) {
         console.error("Failed to retrieve user from Auth:", err);
@@ -146,7 +169,25 @@ export default function ChatPage() {
           filter: { channelId: { eq: selectedChannel.id } },
         });
         if (result.data) {
-          setMessages(result.data as Message[]);
+          // Fetch user info for each message
+          const messagesWithUsers = await Promise.all(
+            result.data.map(async (message) => {
+              if (message.senderId === "OldTimer") {
+                return { ...message, senderDisplayName: "Old Timer" };
+              }
+              try {
+                const userResult = await client.models.User.get({ id: message.senderId });
+                return {
+                  ...message,
+                  senderDisplayName: userResult?.data?.displayName || message.senderId
+                };
+              } catch (err) {
+                console.error("Error fetching user for message:", err);
+                return { ...message, senderDisplayName: message.senderId };
+              }
+            })
+          );
+          setMessages(messagesWithUsers);
         }
       } catch (error) {
         console.error("Error fetching channel messages:", error);
@@ -215,19 +256,20 @@ export default function ChatPage() {
     };
 
     // Save user's message to Amplify
-    let createdMessage: Message | null = null;
+    let createdMessage: MessageWithUser | null = null;
     try {
       const result = await client.models.Message.create(newMessage);
-      if (result) {
-        if (result.data) {
-          createdMessage = {
-            id: result.data.id,
-            content: result.data.content,
-            channelId: result.data.channelId,
-            senderId: result.data.senderId,
-            createdAt: result.data.createdAt || undefined,
-          } as Message;
-        }
+      if (result?.data) {
+        // Get user's display name
+        const userResult = await client.models.User.get({ id: userId });
+        createdMessage = {
+          id: result.data.id,
+          content: result.data.content,
+          channelId: result.data.channelId,
+          senderId: result.data.senderId,
+          createdAt: result.data.createdAt || undefined,
+          senderDisplayName: userResult?.data?.displayName || userId
+        };
       }
     } catch (error) {
       console.error("Error creating message:", error);
@@ -236,7 +278,7 @@ export default function ChatPage() {
 
     // Update local state
     if (createdMessage) {
-      setMessages((prev) => [...prev, createdMessage]);
+      setMessages((prev) => [...prev, createdMessage!]);
     }
 
     // RAG flow if user addresses Old Timer
@@ -255,17 +297,16 @@ export default function ChatPage() {
           senderId: "OldTimer"
         };
         const savedOldTimer = await client.models.Message.create(oldTimerMessage);
-        if (savedOldTimer) {
-          if (savedOldTimer.data) {
-            const oldTimerMessage: Message = {
-              id: savedOldTimer.data.id,
-              content: savedOldTimer.data.content,
-              channelId: savedOldTimer.data.channelId,
-              senderId: savedOldTimer.data.senderId,
-              createdAt: savedOldTimer.data.createdAt || undefined,
-            };
-            setMessages((prev) => [...prev, oldTimerMessage]);
-          }
+        if (savedOldTimer?.data) {
+          const oldTimerMessageWithUser: MessageWithUser = {
+            id: savedOldTimer.data.id,
+            content: savedOldTimer.data.content,
+            channelId: savedOldTimer.data.channelId,
+            senderId: savedOldTimer.data.senderId,
+            createdAt: savedOldTimer.data.createdAt || undefined,
+            senderDisplayName: "Old Timer"
+          };
+          setMessages((prev) => [...prev, oldTimerMessageWithUser]);
         }
       } catch (error) {
         console.error("Error with Old Timer flow:", error);
@@ -546,7 +587,7 @@ export default function ChatPage() {
             {messages.map((message) => (
               <div key={message.id} className="p-3 rounded bg-gray-50">
                 <div className="font-bold text-gray-900">
-                  {message.senderId === "OldTimer" ? "Old Timer" : message.senderId}:
+                  {message.senderDisplayName}:
                 </div>
                 <div className="text-gray-700 mt-1">{message.content}</div>
               </div>
@@ -597,27 +638,27 @@ export default function ChatPage() {
                   <p className="text-sm text-gray-600">{selectedChannel.description || "No description"}</p>
                 </div>
 
-                {channelUsers.length > 0 && (
+                {channelUsers.some(user => user.isOldTimer) && (
                   <div>
                     <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                      Members ({channelUsers.length})
+                      Channel Assistant
                     </h4>
                     <ul className="space-y-3">
-                      {channelUsers.map((user) => (
-                        <li key={user.id} className="flex items-center py-2 px-3 rounded-lg hover:bg-gray-50">
-                          <div className="w-8 h-8 rounded-full bg-patriotic-blue text-white flex items-center justify-center mr-3">
-                            {user.displayName.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-medium">{user.displayName}</div>
-                            {user.isOldTimer && (
+                      {channelUsers
+                        .filter(user => user.isOldTimer)
+                        .map((user) => (
+                          <li key={user.id} className="flex items-center py-2 px-3 rounded-lg hover:bg-gray-50">
+                            <div className="w-8 h-8 rounded-full bg-patriotic-blue text-white flex items-center justify-center mr-3">
+                              {user.displayName.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-medium">{user.displayName}</div>
                               <span className="text-xs bg-patriotic-red text-white px-2 py-0.5 rounded-full">
                                 AI Veteran
                               </span>
-                            )}
-                          </div>
-                        </li>
-                      ))}
+                            </div>
+                          </li>
+                        ))}
                     </ul>
                   </div>
                 )}

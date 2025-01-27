@@ -10,48 +10,72 @@ import type { Schema } from "@/amplify/data/resource";
  * - Retrieves user attributes (e.g. email, name) on mount.
  * - Optionally, user can update displayName or profile picture in your Data model.
  */
+
+// Move client initialization outside component
+const dataClient = generateClient<Schema>();
+
 export default function ProfilePage() {
-  const dataClient = generateClient<Schema>();
   const [userAttributes, setUserAttributes] = useState<any>({});
   const [displayName, setDisplayName] = useState("");
   const [profilePicture, setProfilePicture] = useState("");
   const [message, setMessage] = useState("");
+  const [userId, setUserId] = useState<string>("");
 
+  // Load user data on mount only
   useEffect(() => {
     async function fetchUser() {
       try {
         const user = await getCurrentUser();
-        // Get user info from signInDetails
+        setUserId(user.userId);
         setUserAttributes({ email: user.signInDetails?.loginId });
-        // Optionally, you could fetch a "User" record from Amplify Data if you store user info there
-        // e.g. const result = await dataClient.models.User.get(user.userId);
+        
+        // Fetch user profile from Amplify Data
+        const result = await dataClient.models.User.get({ id: user.userId });
+        if (result?.data) {
+          setDisplayName(result.data.displayName || "");
+          setProfilePicture(result.data.profilePicture || "");
+        }
       } catch (err) {
         console.error("Error fetching current user", err);
       }
     }
     fetchUser();
-  }, [dataClient]);
+  }, []); // Empty dependency array since we only want to run this once
 
   async function handleSave() {
     setMessage("");
     try {
-      // Here, we might do dataClient.models.User.update(...) if we track user fields
-      // For demonstration:
-      // const user = await dataClient.models.User.get(userAttributes.sub);
-      // if (user) {
-      //   const updated = await dataClient.models.User.update({
-      //     ...user,
-      //     displayName,
-      //     profilePicture
-      //   });
-      //   setMessage("Profile updated successfully!");
-      // }
-
-      // Placeholder success
-      setMessage("Profile updated successfully! (Placeholder)");
+      if (!userId || !userAttributes?.email) return;
+      
+      // First check if user exists
+      const existingUser = await dataClient.models.User.get({ id: userId });
+      
+      if (!existingUser?.data) {
+        // Create new user if doesn't exist
+        const result = await dataClient.models.User.create({
+          id: userId,
+          email: userAttributes.email,
+          displayName,
+          profilePicture
+        });
+        if (result?.data) {
+          setMessage("Profile created successfully!");
+        }
+      } else {
+        // Update existing user
+        const result = await dataClient.models.User.update({
+          id: userId,
+          email: userAttributes.email,
+          displayName,
+          profilePicture
+        });
+        if (result?.data) {
+          setMessage("Profile updated successfully!");
+        }
+      }
     } catch (err) {
-      console.error("Error updating user", err);
-      setMessage("Failed to update profile.");
+      console.error("Error saving user profile:", err);
+      setMessage("Failed to save profile. " + (err as Error).message);
     }
   }
 
