@@ -1,30 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser } from 'aws-amplify/auth';
 import { TEAM_ABBREVS } from "@/app/lib/teamLogos";
 import { TeamLogo } from "@/app/components/TeamLogo";
-
-/**
- * Placeholder function to simulate calling a vector DB for baseball info
- */
-async function fetchBaseballData(query: string): Promise<string> {
-  console.log("[DEBUG] fetchBaseballData called with:", query);
-  await new Promise((r) => setTimeout(r, 500)); // simulate network delay
-  return "Placeholder stats for: " + query;
-}
-
-/**
- * Placeholder function to simulate an LLM generating a response
- */
-async function callOldTimerLLM(userMessage: string, retrievedStats: string): Promise<string> {
-  console.log("[DEBUG] callOldTimerLLM with:", { userMessage, retrievedStats });
-  await new Promise((r) => setTimeout(r, 800)); // simulate network delay
-  return `Old Timer says: Here's info about "${userMessage}" from my knowledge of ${retrievedStats}.`;
-}
+import { formatDistanceToNow } from 'date-fns';
 
 interface ChannelUser {
   id: string;
@@ -77,6 +60,7 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState("");
   const [userId, setUserId] = useState<string>("");
   const [favoriteChannels, setFavoriteChannels] = useState<Set<string>>(new Set());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // On mount, fetch user info from Amplify Auth
   useEffect(() => {
@@ -242,6 +226,28 @@ export default function ChatPage() {
     }
   }
 
+  async function callOldTimerAPI(message: string): Promise<string> {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from Old Timer');
+      }
+
+      const data = await response.json();
+      return data.response;
+    } catch (error) {
+      console.error('Error calling Old Timer API:', error);
+      return "Sorry, I'm having trouble with my baseball memories right now.";
+    }
+  }
+
   // Post a message
   async function sendMessage() {
     if (!inputValue.trim() || !selectedChannel || !userId) return;
@@ -284,13 +290,10 @@ export default function ChatPage() {
     // RAG flow if user addresses Old Timer
     if (isAddressingOldTimer(content)) {
       try {
-        // a) Retrieve relevant baseball stats
-        const stats = await fetchBaseballData(content);
+        // Get AI reply through the API
+        const aiReply = await callOldTimerAPI(content);
 
-        // b) Generate AI reply
-        const aiReply = await callOldTimerLLM(content, stats);
-
-        // c) Save AI reply to Amplify
+        // Save AI reply to Amplify
         const oldTimerMessage: Message = {
           content: aiReply,
           channelId: selectedChannel.id,
@@ -446,6 +449,24 @@ export default function ChatPage() {
     loadFavorites();
   }, [userId]);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Sort messages by createdAt time
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeA - timeB;
+    });
+  }, [messages]);
+
   return (
     <div className="flex-1 flex h-[calc(100vh-100px)]">
       {/* Left sidebar - Channels */}
@@ -562,7 +583,7 @@ export default function ChatPage() {
       </aside>
 
       {/* Main chat area */}
-      <main className="flex-1 flex flex-col bg-white overflow-hidden min-h-0">
+      <main className="flex-1 flex flex-col bg-white h-full">
         {/* Chat header */}
         <div className="px-6 py-4 border-b flex-shrink-0">
           <div className="flex items-center gap-4">
@@ -581,23 +602,31 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Messages area - scrollable */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Messages area - fixed height container with scroll */}
+        <div className="flex-1 overflow-y-auto min-h-0 max-h-[calc(100vh-280px)]">
           <div className="p-6 space-y-4">
-            {messages.map((message) => (
+            {sortedMessages.map((message) => (
               <div key={message.id} className="p-3 rounded bg-gray-50">
-                <div className="font-bold text-gray-900">
-                  {message.senderDisplayName}:
+                <div className="flex justify-between items-center">
+                  <div className="font-bold text-gray-900">
+                    {message.senderDisplayName}
+                  </div>
+                  {message.createdAt && (
+                    <div className="text-xs text-gray-500">
+                      {formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}
+                    </div>
+                  )}
                 </div>
                 <div className="text-gray-700 mt-1">{message.content}</div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
         {/* Chat input - fixed at bottom */}
         {selectedChannel && (
-          <div className="px-6 py-4 border-t bg-white flex-shrink-0">
+          <div className="px-6 py-4 border-t flex-shrink-0">
             <div className="flex gap-2">
               <input
                 type="text"
