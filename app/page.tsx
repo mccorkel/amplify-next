@@ -8,7 +8,7 @@ export default function HomePage() {
         className="relative flex items-center justify-center px-4 py-24 text-white"
         style={{
           minHeight: "400px",
-          backgroundImage: "url('/assets/baseball-banner.png')",
+          backgroundImage: "url('https://tigerpanda.tv/assets/baseball-banner.png')",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

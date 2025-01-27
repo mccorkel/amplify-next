@@ -15,7 +15,7 @@ export function TeamLogo({ abbrev, size }: TeamLogoProps) {
   return (
     <div style={{ width: size, height: size }}>
       <Image
-        src={`/assets/${abbrev.toLowerCase()}.png`}
+        src={`https://tigerpanda.tv/assets/${abbrev}.png`}
         alt={`${abbrev} logo`}
         width={size}
         height={size}

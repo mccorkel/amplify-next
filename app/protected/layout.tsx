@@ -8,6 +8,7 @@ import { generateClient } from 'aws-amplify/api';
 import config from '../../amplify_outputs.json';
 import type { Schema } from "@/amplify/data/resource";
 import Link from "next/link";
+import { CyclingQuestions } from "@/app/components/CyclingQuestions";
 
 Amplify.configure(config);
 console.log("Amplify.getConfig():",Amplify.getConfig());
@@ -79,6 +80,12 @@ function AuthenticatedLayout({
               COOPERSTOWN WISDOM
             </span>
           </Link>
+
+          {/* Add CyclingQuestions in the middle */}
+          <div className="flex-1 flex justify-center">
+            <CyclingQuestions />
+          </div>
+
           <nav className="flex items-center space-x-4">
             <Link href="/protected/profile" className="text-sm text-gray-600 hover:text-gray-900">
               Hi, {displayName || "Guest"}!
