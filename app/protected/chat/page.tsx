@@ -4,7 +4,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {getCurrentUser} from 'aws-amplify/auth';
-import { TEAM_ABBREVS, MLBLogos } from "@/app/lib/teamLogos";
+import { TEAM_ABBREVS } from "@/app/lib/teamLogos";
+import { TeamLogo } from "@/app/components/TeamLogo";
 
 /**
  * Placeholder function to simulate calling a vector DB for baseball info
@@ -354,17 +355,17 @@ export default function ChatPage() {
     loadFavorites();
   }, [userId]);
 
-  // Separate channels into joined and available
-  const { joinedChannels, availableChannels } = useMemo(() => {
-    if (!channels) return { joinedChannels: [], availableChannels: [] };
+  // Separate channels into upcoming, joined and available
+  const { upcomingChannels, joinedChannels, availableChannels } = useMemo(() => {
+    if (!channels) return { upcomingChannels: [], joinedChannels: [], availableChannels: [] };
     
-    const joined = channels.filter(ch => myChannelIds.has(ch.id))
+    // First separate upcoming game channels
+    const upcoming = channels.filter(ch => ch.name === "Upcoming Game");
+    
+    // Then handle regular team channels
+    const joined = channels.filter(ch => myChannelIds.has(ch.id) && ch.name !== "Upcoming Game")
       .sort((a, b) => {
-        // Upcoming Game first
-        if (a.name === "Upcoming Game") return -1;
-        if (b.name === "Upcoming Game") return 1;
-        
-        // Favorites second
+        // Favorites first
         const aIsFavorite = favoriteChannels.has(a.id);
         const bIsFavorite = favoriteChannels.has(b.id);
         if (aIsFavorite && !bIsFavorite) return -1;
@@ -374,10 +375,10 @@ export default function ChatPage() {
         return a.name.localeCompare(b.name);
       });
       
-    const available = channels.filter(ch => !myChannelIds.has(ch.id))
+    const available = channels.filter(ch => !myChannelIds.has(ch.id) && ch.name !== "Upcoming Game")
       .sort((a, b) => a.name.localeCompare(b.name));
       
-    return { joinedChannels: joined, availableChannels: available };
+    return { upcomingChannels: upcoming, joinedChannels: joined, availableChannels: available };
   }, [channels, myChannelIds, favoriteChannels]);
 
   return (
@@ -385,6 +386,29 @@ export default function ChatPage() {
       {/* Left sidebar - Channels */}
       <aside className="w-64 bg-gray-800 text-white p-4">
         <h2 className="text-xl font-bold mb-4">Channels</h2>
+        
+        {/* Upcoming Games */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-400 mb-2">UPCOMING GAMES</h3>
+          <div className="space-y-2">
+            {upcomingChannels.map((channel) => (
+              <div
+                key={channel.id}
+                className={`flex items-center p-2 rounded cursor-pointer
+                  ${selectedChannel?.id === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+                onClick={() => setSelectedChannel(channel)}
+              >
+                <div className="flex items-start space-x-2 flex-1">
+                  <span className="text-yellow-500 mt-1">📅</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium">Upcoming</div>
+                    <div className="text-sm">Game</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
         
         {/* Joined Channels */}
         <div className="mb-6">
@@ -406,7 +430,7 @@ export default function ChatPage() {
                       <span className="text-yellow-500 mt-1">📅</span>
                     ) : (
                       <div className="flex flex-col items-center">
-                        {abbrev && MLBLogos[abbrev as keyof typeof MLBLogos] && React.createElement(MLBLogos[abbrev as keyof typeof MLBLogos], { size: 24 })}
+                        {abbrev && <TeamLogo abbrev={abbrev} size={24} />}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -447,7 +471,7 @@ export default function ChatPage() {
                       <span className="text-yellow-500 mt-1">📅</span>
                     ) : (
                       <div className="flex items-center">
-                        {abbrev && MLBLogos[abbrev as keyof typeof MLBLogos] && React.createElement(MLBLogos[abbrev as keyof typeof MLBLogos], { size: 24 })}
+                        {abbrev && <TeamLogo abbrev={abbrev} size={24} />}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

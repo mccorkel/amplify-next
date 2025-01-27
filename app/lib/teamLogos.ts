@@ -1,5 +1,3 @@
-import * as MLBLogos from "react-mlb-logos";
-
 export const TEAM_ABBREVS: Record<string, string> = {
   "Arizona Diamondbacks": "ARI",
   "Atlanta Braves": "ATL",
@@ -32,5 +30,3 @@ export const TEAM_ABBREVS: Record<string, string> = {
   "Toronto Blue Jays": "TOR",
   "Washington Nationals": "WSH"
 };
-
-export { MLBLogos };
