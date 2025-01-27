@@ -8,7 +8,7 @@ const schema = a.schema({
     description: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-  }).authorization((allow) => [allow.authenticated(),allow.publicApiKey()]),
+  }).authorization((allow) => [allow.authenticated()]),
 
   Message: a.model({
     content: a.string().required(),
@@ -17,7 +17,7 @@ const schema = a.schema({
     attachmentPath: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-  }).authorization((allow) => [allow.authenticated(),allow.publicApiKey()]),
+  }).authorization((allow) => [allow.authenticated()]),
 
   User: a.model({
     email: a.string().required(),
@@ -25,14 +25,14 @@ const schema = a.schema({
     profilePicture: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-  }).authorization((allow) => [allow.authenticated(),allow.publicApiKey()]),
+  }).authorization((allow) => [allow.authenticated()]),
 
 ChannelMember: a.model({
     channelId: a.string().required(),
     userId: a.string().required(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
-  }).authorization((allow) => [allow.authenticated(),allow.publicApiKey()]),
+  }).authorization((allow) => [allow.authenticated()]),
 
   addUserToGroup: a
     .mutation()
