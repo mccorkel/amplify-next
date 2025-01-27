@@ -1,22 +1,24 @@
-import type { Schema } from "../../data/resource";
-import { env } from "$amplify/env/add-user-to-group";
-import {
-  AdminAddUserToGroupCommand,
-  CognitoIdentityProviderClient,
-} from "@aws-sdk/client-cognito-identity-provider";
+import { PreSignUpTriggerEvent } from 'aws-lambda';
+import { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } from '@aws-sdk/client-cognito-identity-provider';
 
-type Handler = Schema["addUserToGroup"]["functionHandler"];
-const client = new CognitoIdentityProviderClient();
+const cognitoClient = new CognitoIdentityProviderClient({});
 
-export const handler: Handler = async (event) => {
-  const { userId, groupName } = event.arguments;
-  
-  const command = new AdminAddUserToGroupCommand({
-    Username: userId,
-    GroupName: groupName,
-    UserPoolId: env.AMPLIFY_AUTH_USERPOOL_ID,
-  });
+export const handler = async (event: PreSignUpTriggerEvent) => {
+  try {
+    const { userPoolId, userName } = event;
+    
+    const addToGroupCommand = new AdminAddUserToGroupCommand({
+      GroupName: 'user',
+      UserPoolId: userPoolId,
+      Username: userName
+    });
 
-  const response = await client.send(command);
-  return response;
+    await cognitoClient.send(addToGroupCommand);
+    console.log(`Successfully added user ${userName} to group 'user'`);
+    
+    return event;
+  } catch (error) {
+    console.error('Error adding user to group:', error);
+    throw error;
+  }
 }; 
