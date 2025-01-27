@@ -1,65 +1,221 @@
-body {
-    margin: 0;
-    background: linear-gradient(180deg, rgb(117, 81, 194), rgb(255, 255, 255));
-    display: flex;
-    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-    height: 100vh;
-    width: 100vw;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  main {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
-    color: white;
-  }
-  button:hover {
-    border-color: #646cff;
-  }
-  button:focus,
-  button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
-  }
-  
-  ul {
-    padding-inline-start: 0;
-    margin-block-start: 0;
-    margin-block-end: 0;
-    list-style-type: none;
-    display: flex;
-    flex-direction: column;
-    margin: 8px 0;
-    border: 1px solid black;
-    gap: 1px;
-    background-color: black;
-    border-radius: 8px;
-    overflow: auto;
-  }
-  
-  li {
-    background-color: white;
-    padding: 8px;
-  }
-  
-  li:hover {
-    background: #dadbf9;
-  }
-  
-  a {
-    font-weight: 800;
-    text-decoration: none;
-  }
+/* Base styles */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #313338;
+  color: #FFFFFF;
+}
+
+/* Amplify UI overrides */
+.amplify-authenticator {
+  height: 100vh;
+  width: 100vw;
+  background-color: #313338;
+  color: #FFFFFF;
+}
+
+.amplify-authenticator [data-amplify-authenticator-signin="true"] {
+  background-color: #313338;
+}
+
+.amplify-authenticator [data-amplify-container] {
+  height: 100vh;
+  width: 100vw;
+  padding: 0;
+  margin: 0;
+}
+
+/* Main app layout */
+main.chat-app {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  background-color: #313338;
+  color: #FFFFFF;
+}
+
+/* Navigation bars */
+.left-nav {
+  width: 16rem;
+  background-color: #2B2D31;
+  display: flex;
+  flex-direction: column;
+  color: #FFFFFF;
+}
+
+.right-nav {
+  width: 20%;
+  min-width: 200px;
+  background-color: #2B2D31;
+  display: flex;
+  flex-direction: column;
+  color: #FFFFFF;
+}
+
+/* Chat area */
+.chat-area {
+  flex: 1;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  background-color: #313338;
+  color: #FFFFFF;
+  position: relative;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  position: absolute;
+  top: 3rem; /* Height of nav header */
+  bottom: 20%; /* Leave space for input */
+  left: 0;
+  right: 0;
+  padding: 1rem;
+}
+
+.message-input-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20%;
+  min-height: 120px;
+  max-height: 200px;
+  background-color: #313338;
+  border-top: 1px solid #232428;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Headers */
+.nav-header {
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  background-color: #232428;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: #FFFFFF;
+}
+
+/* Text styles */
+h1, h2, h3 {
+  color: #FFFFFF;
+}
+
+.channel-name {
+  color: #DCDDDE;
+}
+
+.channel-name:hover {
+  color: #FFFFFF;
+  background-color: #35373C;
+}
+
+.channel-name.selected {
+  color: #FFFFFF;
+  background-color: #404249;
+}
+
+.message-content {
+  color: #DCDDDE;
+}
+
+.message-timestamp {
+  color: #72767D;
+}
+
+.user-name {
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+.status-text {
+  color: #B9BBBE;
+}
+
+/* Message styles */
+.message-input {
+  background-color: #383A40;
+  border-radius: 0.5rem;
+  color: #DCDDDE;
+}
+
+.message-input::placeholder {
+  color: #72767D;
+}
+
+/* Button styles */
+button {
+  color: #B9BBBE;
+}
+
+button:hover {
+  color: #DCDDDE;
+}
+
+.primary-button {
+  color: #FFFFFF;
+  background-color: #5865F2;
+}
+
+.primary-button:hover {
+  background-color: #4752C4;
+}
+
+/* Action buttons */
+.action-button {
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+.action-button:hover {
+  color: #FFFFFF;
+  background-color: #35373C;
+}
+
+.add-channel-button {
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.add-channel-button:hover {
+  color: #FFFFFF;
+  background-color: #35373C;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2B2D31;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #202225;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2E3035;
+}
+
+/* Channel list styles */
+.channel-list-header {
+  color: #FFFFFF;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.channel-prefix {
+  color: #949BA4;
+}

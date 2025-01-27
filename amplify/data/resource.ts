@@ -1,16 +1,16 @@
 import { a, defineData } from "@aws-amplify/backend";
-import { addUserToGroup } from "../auth/add-user-to-group_renamed/resource";
+import { addUserToGroup } from "./add-user-to-group/resource";
 import type { ClientSchema } from "@aws-amplify/backend";
 
 const schema = a.schema({
-  Channel_renamed: a.model({
+  Channel: a.model({
     name: a.string().required(),
     description: a.string(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  Message_renamed: a.model({
+  Message: a.model({
     content: a.string().required(),
     channelId: a.string().required(),
     senderId: a.string().required(),
@@ -19,7 +19,7 @@ const schema = a.schema({
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  User_renamed: a.model({
+  User: a.model({
     email: a.string().required(),
     displayName: a.string().required(),
     profilePicture: a.string(),
@@ -27,20 +27,20 @@ const schema = a.schema({
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  ChannelMember_renamed: a.model({
+  ChannelMember: a.model({
     channelId: a.string().required(),
     userId: a.string().required(),
     createdAt: a.datetime(),
     updatedAt: a.datetime(),
   }).authorization((allow) => [allow.authenticated()]),
 
-  addUserToGroup_renamed: a
+  addUserToGroup: a
     .mutation()
     .arguments({
       userId: a.string().required(),
       groupName: a.string().required(),
     })
-    .authorization((allow) => [allow.group("ADMINS")])
+    .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(addUserToGroup))
     .returns(a.json()),
 });
@@ -50,7 +50,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: "iam",
+    defaultAuthorizationMode: "userPool"
   },
 });
 

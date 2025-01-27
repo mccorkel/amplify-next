@@ -5,7 +5,7 @@ import {
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
 
-type Handler = Schema["addUserToGroup_renamed"]["functionHandler"];
+type Handler = Schema["addUserToGroup"]["functionHandler"];
 const client = new CognitoIdentityProviderClient();
 
 export const handler: Handler = async (event) => {
