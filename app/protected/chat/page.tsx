@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
 import {getCurrentUser} from 'aws-amplify/auth';
-import { TEAM_ABBREVS } from "@/app/lib/teamLogos";
-import TeamLogo from "react-mlb-logos";
+import { TEAM_ABBREVS, MLBLogos } from "@/app/lib/teamLogos";
 
 /**
  * Placeholder function to simulate calling a vector DB for baseball info
@@ -49,14 +48,18 @@ interface ChannelMember {
 
 const TEAM_ABBREVIATIONS = TEAM_ABBREVS;
 
+// Move client initialization outside of component
+const client = generateClient<Schema>();
+
 export default function ChatPage() {
-  const client = generateClient<Schema>();
+  // Remove client initialization from here
   const [channels, setChannels] = useState<Channel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [userId, setUserId] = useState<string>("");
   const [myChannelIds, setMyChannelIds] = useState<Set<string>>(new Set());
+  const [favoriteChannels, setFavoriteChannels] = useState<Set<string>>(new Set());
 
   // On mount, fetch user info from Amplify Auth
   useEffect(() => {
@@ -102,9 +105,29 @@ export default function ChatPage() {
         
         const result = await client.models.Channel.list();
         if (result.data) {
-          setChannels(result.data as Channel[]);
-          if (result.data.length > 0) {
-            setSelectedChannel(result.data[0]);
+          const channelList = result.data as Channel[];
+          setChannels(channelList);
+          
+          // Sort channels to find the top team channel
+          const sortedList = channelList.sort((a, b) => {
+            // Upcoming Game always first
+            if (a.name === "Upcoming Game") return -1;
+            if (b.name === "Upcoming Game") return 1;
+            
+            // Favorites second
+            const aIsFavorite = favoriteChannels.has(a.id);
+            const bIsFavorite = favoriteChannels.has(b.id);
+            if (aIsFavorite && !bIsFavorite) return -1;
+            if (!aIsFavorite && bIsFavorite) return 1;
+            
+            // Alphabetical for the rest
+            return a.name.localeCompare(b.name);
+          });
+
+          // Select the first non-"Upcoming Game" channel
+          const defaultChannel = sortedList.find(ch => ch.name !== "Upcoming Game") || sortedList[0];
+          if (defaultChannel) {
+            setSelectedChannel(defaultChannel);
           }
         }
       } catch (err: any) {
@@ -116,7 +139,7 @@ export default function ChatPage() {
       }
     }
     fetchChannels();
-  }, [client]);
+  }, [client, favoriteChannels]);
 
   // 2) Fetch messages for the selected channel
   useEffect(() => {
@@ -253,28 +276,195 @@ export default function ChatPage() {
     }
   }
 
+  // Add function to split team name into city and team
+  const splitTeamName = (name: string) => {
+    if (name === "Upcoming Game") return { city: "", team: name };
+    const lastSpace = name.lastIndexOf(" ");
+    if (lastSpace === -1) return { city: "", team: name };
+    return {
+      city: name.substring(0, lastSpace),
+      team: name.substring(lastSpace + 1)
+    };
+  };
+
+  // Update toggleFavorite to persist to database
+  const toggleFavorite = async (channelId: string) => {
+    try {
+      if (!userId) return;
+      
+      // Check if favorite already exists
+      const existing = await client.models.UserFavorite.list({
+        filter: { userId: { eq: userId }, channelId: { eq: channelId } }
+      });
+
+      if (existing.data && existing.data.length > 0) {
+        // Remove favorite
+        await client.models.UserFavorite.delete({ id: existing.data[0].id });
+        const newFavorites = new Set<string>();
+        favoriteChannels.forEach(id => {
+          if (id) newFavorites.add(id);
+        });
+
+        if (channelId) {
+          if (newFavorites.has(channelId)) {
+            newFavorites.delete(channelId);
+          } else {
+            newFavorites.add(channelId);
+          }
+          setFavoriteChannels(newFavorites);
+        }
+      } else {
+        // Add favorite
+        await client.models.UserFavorite.create({
+          userId,
+          channelId
+        });
+        const newFavorites = new Set<string>();
+        favoriteChannels.forEach(id => {
+          if (id) newFavorites.add(id);
+        });
+        newFavorites.add(channelId);
+        setFavoriteChannels(newFavorites);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
+  // Update loadFavorites useEffect
+  useEffect(() => {
+    async function loadFavorites() {
+      if (!userId || !client?.models?.UserFavorite) return;
+      try {
+        const result = await client.models.UserFavorite.list({
+          filter: { userId: { eq: userId } }
+        });
+        if (result?.data) {
+          const validChannelIds = result.data
+            .map(f => f.channelId)
+            .filter((id): id is string => id !== null && id !== undefined);
+          
+          const favorites = new Set<string>(validChannelIds);
+          setFavoriteChannels(favorites);
+        }
+      } catch (error) {
+        console.error("Error loading favorites:", error);
+      }
+    }
+    loadFavorites();
+  }, [userId]);
+
+  // Separate channels into joined and available
+  const { joinedChannels, availableChannels } = useMemo(() => {
+    if (!channels) return { joinedChannels: [], availableChannels: [] };
+    
+    const joined = channels.filter(ch => myChannelIds.has(ch.id))
+      .sort((a, b) => {
+        // Upcoming Game first
+        if (a.name === "Upcoming Game") return -1;
+        if (b.name === "Upcoming Game") return 1;
+        
+        // Favorites second
+        const aIsFavorite = favoriteChannels.has(a.id);
+        const bIsFavorite = favoriteChannels.has(b.id);
+        if (aIsFavorite && !bIsFavorite) return -1;
+        if (!aIsFavorite && bIsFavorite) return 1;
+        
+        // Alphabetical for the rest
+        return a.name.localeCompare(b.name);
+      });
+      
+    const available = channels.filter(ch => !myChannelIds.has(ch.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+      
+    return { joinedChannels: joined, availableChannels: available };
+  }, [channels, myChannelIds, favoriteChannels]);
+
   return (
     <div className="flex-1 flex">
       {/* Left sidebar - Channels */}
       <aside className="w-64 bg-gray-800 text-white p-4">
         <h2 className="text-xl font-bold mb-4">Channels</h2>
-        <div className="flex-1 overflow-y-auto">
-          {channels.map((channel) => (
-            <div key={channel.id} className={`flex items-center justify-between p-2 rounded mb-1 hover:bg-gray-700 ${selectedChannel?.id === channel.id ? 'bg-gray-700' : ''}`}>
-              <button
-                onClick={() => setSelectedChannel(channel)}
-                className="text-left flex-1"
-              >
-                {channel.name}
-              </button>
-              <button
-                onClick={() => toggleMembership(channel)}
-                className="text-xs bg-patriotic-blue text-white px-2 py-1 rounded ml-2 hover:bg-patriotic-red"
-              >
-                {myChannelIds.has(channel.id) ? "Leave" : "Join"}
-              </button>
-            </div>
-          ))}
+        
+        {/* Joined Channels */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-400 mb-2">JOINED CHANNELS</h3>
+          <div className="space-y-2">
+            {joinedChannels.map((channel) => {
+              const { city, team } = splitTeamName(channel.name);
+              const abbrev = TEAM_ABBREVS[channel.name];
+              
+              return (
+                <div
+                  key={channel.id}
+                  className={`flex items-center p-2 rounded cursor-pointer
+                    ${selectedChannel?.id === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+                  onClick={() => setSelectedChannel(channel)}
+                >
+                  <div className="flex items-start space-x-2 flex-1">
+                    {channel.name === "Upcoming Game" ? (
+                      <span className="text-yellow-500 mt-1">📅</span>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        {abbrev && MLBLogos[abbrev as keyof typeof MLBLogos] && React.createElement(MLBLogos[abbrev as keyof typeof MLBLogos], { size: 24 })}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(channel.id);
+                          }}
+                          className="text-gray-400 hover:text-yellow-500 focus:outline-none mt-1"
+                        >
+                          {favoriteChannels.has(channel.id) ? '★' : '☆'}
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{city}</div>
+                      <div className="text-sm">{team}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        
+        {/* Available Channels */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-400 mb-2">AVAILABLE CHANNELS</h3>
+          <div className="space-y-2">
+            {availableChannels.map((channel) => {
+              const { city, team } = splitTeamName(channel.name);
+              const abbrev = TEAM_ABBREVS[channel.name];
+              
+              return (
+                <div
+                  key={channel.id}
+                  className="flex items-center p-2 rounded hover:bg-gray-700"
+                >
+                  <div className="flex items-start space-x-2 flex-1">
+                    {channel.name === "Upcoming Game" ? (
+                      <span className="text-yellow-500 mt-1">📅</span>
+                    ) : (
+                      <div className="flex items-center">
+                        {abbrev && MLBLogos[abbrev as keyof typeof MLBLogos] && React.createElement(MLBLogos[abbrev as keyof typeof MLBLogos], { size: 24 })}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{city}</div>
+                      <div className="text-sm">{team}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleMembership(channel)}
+                    className="text-xs bg-patriotic-blue text-white px-2 py-1 rounded ml-2 hover:bg-patriotic-red"
+                  >
+                    Join
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </aside>
 

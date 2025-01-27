@@ -43,6 +43,17 @@ ChannelMember: a.model({
     .authorization((allow) => [allow.authenticated()])
     .handler(a.handler.function(addUserToGroup))
     .returns(a.json()),
+
+  UserFavorite: a
+    .model({
+      userId: a.string(),
+      channelId: a.string(),
+      createdAt: a.datetime(),
+      updatedAt: a.datetime(),
+    })
+    .authorization((allow) => [
+      allow.authenticated().to(['create', 'update', 'delete', 'read']),
+    ])
 });
 
 export type Schema = ClientSchema<typeof schema>;

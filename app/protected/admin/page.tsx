@@ -38,6 +38,91 @@ export default function AdminPage() {
     checkUserGroups();
   }, [dataClient]);
 
+  async function seedMLBChannels() {
+    const mlbTeams = [
+      "Arizona Diamondbacks","Atlanta Braves","Baltimore Orioles","Boston Red Sox","Chicago Cubs",
+      "Chicago White Sox","Cincinnati Reds","Cleveland Guardians","Colorado Rockies","Detroit Tigers",
+      "Houston Astros","Kansas City Royals","Los Angeles Angels","Los Angeles Dodgers","Miami Marlins",
+      "Milwaukee Brewers","Minnesota Twins","New York Mets","New York Yankees","Oakland Athletics",
+      "Philadelphia Phillies","Pittsburgh Pirates","San Diego Padres","San Francisco Giants","Seattle Mariners",
+      "St. Louis Cardinals","Tampa Bay Rays","Texas Rangers","Toronto Blue Jays","Washington Nationals"
+    ];
+    
+    try {
+      // 1) Find or Create "OldTimer" user
+      let oldTimerUserId: string | null = null;
+      {
+        const existing = await dataClient.models.User.list({ filter: { email: { eq: "oldtimer@cooperstown.com" } }});
+        if (existing.data && existing.data.length > 0) {
+          oldTimerUserId = existing.data[0].id;
+        } else {
+          const newOt = await dataClient.models.User.create({
+            email: "oldtimer@cooperstown.com",
+            displayName: "Old Timer",
+            profilePicture: "",
+          });
+          oldTimerUserId = newOt?.data?.id || null;
+        }
+      }
+  
+      // 2) Create all MLB channels & an "Upcoming Game" channel if missing
+      const allChannels = await dataClient.models.Channel.list();
+      const existingChNames = new Set<string>();
+      if (allChannels.data) {
+        allChannels.data.forEach((ch:any) => existingChNames.add(ch.name));
+      }
+  
+      // We'll keep track of newly created channel IDs
+      const newChannels: any[] = [];
+      
+      // Ensure upcoming game channel
+      if (!existingChNames.has("Upcoming Game")) {
+        const c = await dataClient.models.Channel.create({
+          name: "Upcoming Game",
+          description: "Chat about upcoming MLB games"
+        });
+        if (c?.data) {
+          newChannels.push(c.data);
+        }
+      }
+      
+      // Each MLB team channel
+      for (const team of mlbTeams) {
+        if (!existingChNames.has(team)) {
+          const c = await dataClient.models.Channel.create({
+            name: team,
+            description: `${team} official chat`
+          });
+          if (c?.data) {
+            newChannels.push(c.data);
+          }
+        }
+      }
+  
+      // 3) For each newly created channel, add OldTimer membership if oldTimerUserId is valid
+      if (oldTimerUserId) {
+        for (const ch of newChannels) {
+          // create membership
+          await dataClient.models.ChannelMember.create({
+            channelId: ch.id,
+            userId: oldTimerUserId
+          });
+        }
+      }
+  
+      // Reload channel list in the Admin UI
+      const updated = await dataClient.models.Channel.list();
+      if (updated.data) {
+        setAllChannels(updated.data);
+      }
+  
+      alert("MLB channels and OldTimer seeded successfully!");
+    } catch (err) {
+      console.error("Error seeding MLB channels:", err);
+      alert("Failed to seed channels. Check console logs.");
+    }
+  }
+  
   async function createChannel() {
     if (!channelName.trim()) return;
     try {
@@ -73,6 +158,22 @@ export default function AdminPage() {
         Welcome, Admin! Manage channels or moderate messages below.
       </p>
 
+      {/* Seed MLB Channels */}
+      <div className="mb-6 border p-4 rounded">
+        <h2 className="mb-2 font-semibold text-lg text-patriotic-blue">
+          Seed MLB Channels + OldTimer
+        </h2>
+        <p className="mb-2 text-sm text-gray-700">
+          This will create channels for all MLB teams plus an "Upcoming Game" channel, and ensure an "OldTimer" user is in each.
+        </p>
+        <button
+          onClick={seedMLBChannels}
+          className="rounded bg-patriotic-red px-3 py-2 text-white hover:opacity-90 text-sm"
+        >
+          Seed MLB
+        </button>
+      </div>
+      
       {/* Create Channel */}
       <div className="mb-6 border p-4 rounded">
         <h2 className="mb-2 font-semibold text-lg text-patriotic-blue">

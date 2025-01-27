@@ -6,13 +6,13 @@ export const TEAM_ABBREVS: Record<string, string> = {
   "Baltimore Orioles": "BAL",
   "Boston Red Sox": "BOS",
   "Chicago Cubs": "CHC",
-  "Chicago White Sox": "CHW",
+  "Chicago White Sox": "CWS",
   "Cincinnati Reds": "CIN",
   "Cleveland Guardians": "CLE",
   "Colorado Rockies": "COL",
   "Detroit Tigers": "DET",
   "Houston Astros": "HOU",
-  "Kansas City Royals": "KC",
+  "Kansas City Royals": "KCR",
   "Los Angeles Angels": "LAA",
   "Los Angeles Dodgers": "LAD",
   "Miami Marlins": "MIA",
@@ -23,14 +23,14 @@ export const TEAM_ABBREVS: Record<string, string> = {
   "Oakland Athletics": "OAK",
   "Philadelphia Phillies": "PHI",
   "Pittsburgh Pirates": "PIT",
-  "San Diego Padres": "SD",
-  "San Francisco Giants": "SF",
+  "San Diego Padres": "SDP",
+  "San Francisco Giants": "SFG",
   "Seattle Mariners": "SEA",
   "St. Louis Cardinals": "STL",
-  "Tampa Bay Rays": "TB",
+  "Tampa Bay Rays": "TBR",
   "Texas Rangers": "TEX",
   "Toronto Blue Jays": "TOR",
   "Washington Nationals": "WSH"
 };
 
-export const TeamLogos = MLBLogos;
+export { MLBLogos };
