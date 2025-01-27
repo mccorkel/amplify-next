@@ -442,136 +442,142 @@ if (firstCh) {
   return (
     <div className="flex-1 flex h-screen">
       {/* Left sidebar - Channels */}
-      <aside className="w-64 bg-gray-800 text-white p-4 flex flex-col overflow-hidden">
-        <h2 className="text-xl font-bold mb-4 flex-shrink-0">Channels</h2>
+      <aside className="w-64 bg-gray-800 text-white flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-gray-700 flex-shrink-0">
+          <h2 className="text-xl font-bold">Channels</h2>
+        </div>
         
         {/* Make the channels section scrollable */}
-        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-          {/* Upcoming Games */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-800 py-2">UPCOMING GAMES</h3>
-            <div className="space-y-2">
-              {upcomingChannels.map((channel) => (
-                <div
-                  key={channel.id}
-                  className={`flex items-center p-2 rounded cursor-pointer
-                    ${selectedChannel?.id === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-                  onClick={async () => {
-                    setSelectedChannel(channel);
-                    await loadChannelUsers(channel.id);
-                  }}
-                >
-                  <div className="flex items-start space-x-2 flex-1">
-                    <span className="text-yellow-500 mt-1">📅</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">Upcoming</div>
-                      <div className="text-sm">Game</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          {/* Joined Channels */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-800 py-2">JOINED CHANNELS</h3>
-            <div className="space-y-2">
-              {joinedChannels.map((channel) => {
-                const { city, team } = splitTeamName(channel.name);
-                const abbrev = TEAM_ABBREVS[channel.name];
-                
-                return (
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-6">
+            {/* Upcoming Games */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-800 py-2">UPCOMING GAMES</h3>
+              <div className="space-y-2">
+                {upcomingChannels.map((channel) => (
                   <div
                     key={channel.id}
                     className={`flex items-center p-2 rounded cursor-pointer
                       ${selectedChannel?.id === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
-                    onClick={() => setSelectedChannel(channel)}
+                    onClick={async () => {
+                      setSelectedChannel(channel);
+                      await loadChannelUsers(channel.id);
+                    }}
                   >
                     <div className="flex items-start space-x-2 flex-1">
-                      {channel.name === "Upcoming Game" ? (
-                        <span className="text-yellow-500 mt-1">📅</span>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          {abbrev && <TeamLogo abbrev={abbrev} size={24} />}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleFavorite(channel.id);
-                            }}
-                            className="text-gray-400 hover:text-yellow-500 focus:outline-none mt-1"
-                          >
-                            {favoriteChannels.has(channel.id) ? '★' : '☆'}
-                          </button>
-                        </div>
-                      )}
+                      <span className="text-yellow-500 mt-1">📅</span>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{city}</div>
-                        <div className="text-sm">{team}</div>
+                        <div className="text-sm font-medium">Upcoming</div>
+                        <div className="text-sm">Game</div>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-          
-          {/* Available Channels */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-800 py-2">AVAILABLE CHANNELS</h3>
-            <div className="space-y-2">
-              {availableChannels.map((channel) => {
-                const { city, team } = splitTeamName(channel.name);
-                const abbrev = TEAM_ABBREVS[channel.name];
-                
-                return (
-                  <div
-                    key={channel.id}
-                    className="flex items-center p-2 rounded hover:bg-gray-700"
-                  >
-                    <div className="flex items-start space-x-2 flex-1">
-                      {channel.name === "Upcoming Game" ? (
-                        <span className="text-yellow-500 mt-1">📅</span>
-                      ) : (
-                        <div className="flex items-center">
-                          {abbrev && <TeamLogo abbrev={abbrev} size={24} />}
+            
+            {/* Joined Channels */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-800 py-2">JOINED CHANNELS</h3>
+              <div className="space-y-2">
+                {joinedChannels.map((channel) => {
+                  const { city, team } = splitTeamName(channel.name);
+                  const abbrev = TEAM_ABBREVS[channel.name];
+                  
+                  return (
+                    <div
+                      key={channel.id}
+                      className={`flex items-center p-2 rounded cursor-pointer
+                        ${selectedChannel?.id === channel.id ? 'bg-gray-700' : 'hover:bg-gray-700'}`}
+                      onClick={() => setSelectedChannel(channel)}
+                    >
+                      <div className="flex items-start space-x-2 flex-1">
+                        {channel.name === "Upcoming Game" ? (
+                          <span className="text-yellow-500 mt-1">📅</span>
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            {abbrev && <TeamLogo abbrev={abbrev} size={24} />}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFavorite(channel.id);
+                              }}
+                              className="text-gray-400 hover:text-yellow-500 focus:outline-none mt-1"
+                            >
+                              {favoriteChannels.has(channel.id) ? '★' : '☆'}
+                            </button>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{city}</div>
+                          <div className="text-sm">{team}</div>
                         </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{city}</div>
-                        <div className="text-sm">{team}</div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleMembership(channel)}
-                      className="text-xs bg-patriotic-blue text-white px-2 py-1 rounded ml-2 hover:bg-patriotic-red"
+                  );
+                })}
+              </div>
+            </div>
+            
+            {/* Available Channels */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-400 mb-2 sticky top-0 bg-gray-800 py-2">AVAILABLE CHANNELS</h3>
+              <div className="space-y-2">
+                {availableChannels.map((channel) => {
+                  const { city, team } = splitTeamName(channel.name);
+                  const abbrev = TEAM_ABBREVS[channel.name];
+                  
+                  return (
+                    <div
+                      key={channel.id}
+                      className="flex items-center p-2 rounded hover:bg-gray-700"
                     >
-                      Join
-                    </button>
-                  </div>
-                );
-              })}
+                      <div className="flex items-start space-x-2 flex-1">
+                        {channel.name === "Upcoming Game" ? (
+                          <span className="text-yellow-500 mt-1">📅</span>
+                        ) : (
+                          <div className="flex items-center">
+                            {abbrev && <TeamLogo abbrev={abbrev} size={24} />}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium">{city}</div>
+                          <div className="text-sm">{team}</div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleMembership(channel)}
+                        className="text-xs bg-patriotic-blue text-white px-2 py-1 rounded ml-2 hover:bg-patriotic-red"
+                      >
+                        Join
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Main chat area */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col bg-white overflow-hidden">
         {/* Chat header */}
-        <div className="p-4 border-b flex-shrink-0 bg-white">
+        <div className="px-6 py-4 border-b flex-shrink-0">
           <h2 className="text-xl font-bold">
             {selectedChannel ? selectedChannel.name : "Select a channel"}
           </h2>
         </div>
 
         {/* Messages area - scrollable */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
             {messages.map((message) => (
-              <div key={message.id} className="p-2 rounded bg-gray-100">
-                <div className="font-bold">{message.senderId === "OldTimer" ? "Old Timer" : message.senderId}:</div>
-                <div>{message.content}</div>
+              <div key={message.id} className="p-3 rounded bg-gray-50">
+                <div className="font-bold text-gray-900">
+                  {message.senderId === "OldTimer" ? "Old Timer" : message.senderId}:
+                </div>
+                <div className="text-gray-700 mt-1">{message.content}</div>
               </div>
             ))}
           </div>
@@ -579,12 +585,12 @@ if (firstCh) {
 
         {/* Chat input - fixed at bottom */}
         {selectedChannel && (
-          <div className="p-4 border-t bg-white">
+          <div className="px-6 py-4 border-t bg-white">
             <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="Type your message here..."
-                className="flex-1 p-2 border rounded"
+                className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:border-blue-500"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => {
@@ -596,7 +602,7 @@ if (firstCh) {
               />
               <button
                 onClick={sendMessage}
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none"
               >
                 Send
               </button>
@@ -607,44 +613,48 @@ if (firstCh) {
 
       {/* Right sidebar - User list */}
       <aside className="w-64 border-l bg-white flex flex-col overflow-hidden">
-        <div className="p-4 border-b flex-shrink-0">
+        <div className="px-6 py-4 border-b flex-shrink-0">
           <h3 className="text-lg font-semibold">Channel Info</h3>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-4">
-          {selectedChannel ? (
-            <>
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">About</h4>
-                <p className="text-sm text-gray-600">{selectedChannel.description || "No description"}</p>
-              </div>
-
-              {channelUsers.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Members ({channelUsers.length})</h4>
-                  <ul className="space-y-2">
-                    {channelUsers.map((user) => (
-                      <li key={user.id} className="flex items-center py-2 px-3 rounded-lg hover:bg-gray-50">
-                        <div className="w-8 h-8 rounded-full bg-patriotic-blue text-white flex items-center justify-center mr-3">
-                          {user.displayName.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="font-medium">{user.displayName}</div>
-                          {user.isOldTimer && (
-                            <span className="text-xs bg-patriotic-red text-white px-2 py-0.5 rounded-full">
-                              AI Veteran
-                            </span>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            {selectedChannel ? (
+              <>
+                <div className="mb-8">
+                  <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">About</h4>
+                  <p className="text-sm text-gray-600">{selectedChannel.description || "No description"}</p>
                 </div>
-              )}
-            </>
-          ) : (
-            <p className="text-gray-500 text-sm">Select a channel to see details</p>
-          )}
+
+                {channelUsers.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                      Members ({channelUsers.length})
+                    </h4>
+                    <ul className="space-y-3">
+                      {channelUsers.map((user) => (
+                        <li key={user.id} className="flex items-center py-2 px-3 rounded-lg hover:bg-gray-50">
+                          <div className="w-8 h-8 rounded-full bg-patriotic-blue text-white flex items-center justify-center mr-3">
+                            {user.displayName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-medium">{user.displayName}</div>
+                            {user.isOldTimer && (
+                              <span className="text-xs bg-patriotic-red text-white px-2 py-0.5 rounded-full">
+                                AI Veteran
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-500 text-sm">Select a channel to see details</p>
+            )}
+          </div>
         </div>
       </aside>
     </div>

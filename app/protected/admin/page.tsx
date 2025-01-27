@@ -4,7 +4,8 @@ import React, { useEffect, useState } from "react";
 import { getCurrentUser } from "aws-amplify/auth";
 import { generateClient } from "aws-amplify/data";
 import type { Schema } from "@/amplify/data/resource";
-import { TEAM_ABBREVS, TeamLogos } from "@/app/lib/teamLogos";
+import { TEAM_ABBREVS } from "@/app/lib/teamLogos";
+import { TeamLogo } from "@/app/components/TeamLogo";
 
 /**
  * Admin Dashboard
@@ -207,13 +208,10 @@ export default function AdminPage() {
             className="mb-2 flex items-center justify-between rounded bg-white px-4 py-2 shadow"
           >
             <div>
-              <p className="font-bold text-gray-900 flex items-center space-x-2">
-                {TEAM_ABBREVS[ch.name] && (
-                  // @ts-ignore - TeamLogos has dynamic properties
-                  React.createElement(TeamLogos[TEAM_ABBREVS[ch.name]], { size: "30" })
-                )}
+              <div className="flex items-center space-x-2">
+                <TeamLogo abbrev={TEAM_ABBREVS[ch.name]} size={30} />
                 <span>{ch.name}</span>
-              </p>
+              </div>
               <p className="text-sm text-gray-600">
                 {ch.description || "No description"}
               </p>
